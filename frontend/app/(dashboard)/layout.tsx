@@ -2,7 +2,7 @@ import type React from "react"
 import { DashboardSidebar } from "@/components/dashboard/sidebar"
 import { MobileNav } from "@/components/dashboard/mobile-nav"
 import { MobileHeader } from "@/components/dashboard/mobile-header"
-import { KisaanMitraChatFloater } from "@/components/kisaan-mitra/chat-floater"
+import FloatingAIAgent from "@/components/FloatingAIAgent"
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -15,7 +15,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <MobileNav />
       </main>
 
-      <KisaanMitraChatFloater />
+      <FloatingAIAgent />
     </div>
   )
 }
+

@@ -1,5 +1,4 @@
 import { type NextRequest, NextResponse } from "next/server"
-import { GoogleGenerativeAI } from "@google/generative-ai"
 
 export const runtime = "nodejs"
 export const maxDuration = 60
@@ -33,20 +32,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Query is required" }, { status: 400 })
     }
 
-    // Check for Gemini API key
-    const apiKey = process.env.GEMINI_API_KEY
+    // Check for OpenRouter API key
+    const apiKey = process.env.OPENROUTER_API_KEY
     if (!apiKey) {
       return NextResponse.json(
         {
-          error: "Gemini API key not configured. Please add GEMINI_API_KEY to your environment variables.",
+          error: "OpenRouter API key not configured. Please add OPENROUTER_API_KEY to your environment variables.",
         },
         { status: 500 },
       )
     }
-
-    // Initialize Gemini
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
 
     // Extract base64 data and mime type from data URL
     const matches = image.match(/^data:([A-Za-z-+/]+);base64,(.+)$/)
@@ -69,18 +64,50 @@ Please provide a detailed analysis for farmers, including:
 
 CRITICAL: Respond ENTIRELY in ${languageName}. Every single word must be in ${languageName}. Do NOT mix languages. Do NOT use English if another language is specified.`
 
-    // Generate content with image
-    const result = await model.generateContent([
-      { text: prompt },
-      {
-        inlineData: {
-          mimeType,
-          data: base64Data,
-        },
+    // Use OpenRouter API with vision model
+    const response = await fetch('https://openrouter.ai/api/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+        'HTTP-Referer': 'https://kisaan-mitra.app',
+        'X-Title': 'Kisaan Mitra AI',
       },
-    ])
+      body: JSON.stringify({
+        model: 'google/gemini-2.0-flash-001',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              {
+                type: 'text',
+                text: prompt,
+              },
+              {
+                type: 'image_url',
+                image_url: {
+                  url: `data:${mimeType};base64,${base64Data}`,
+                },
+              },
+            ],
+          },
+        ],
+        max_tokens: 2048,
+        temperature: 0.7,
+      }),
+    })
 
-    const analysis = result.response.text()
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error('[Analyze Image] OpenRouter error:', response.status, errorText)
+      return NextResponse.json(
+        { error: `OpenRouter API error: ${response.status}` },
+        { status: response.status },
+      )
+    }
+
+    const data = await response.json()
+    const analysis = data.choices?.[0]?.message?.content || 'Unable to analyze the image'
 
     return NextResponse.json({
       success: true,

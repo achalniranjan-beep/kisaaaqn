@@ -90,8 +90,14 @@ export function KisaanMitraChatFloater({ defaultOpen = false }: { defaultOpen?: 
 
   // Initialize Socket and Speech Recognition (Cleanup Logic)
   useEffect(() => {
-    // 1. Socket Connection
-    socketRef.current = io(API_URL);
+    // 1. Socket Connection - Only connect if backend is explicitly configured
+    if (API_URL && API_URL !== "http://localhost:5000") {
+      try {
+        socketRef.current = io(API_URL);
+      } catch (e) {
+        console.warn("[Chat] Socket.io connection failed - backend not available");
+      }
+    }
 
     // 2. Speech Recognition Setup
     if (typeof window !== "undefined") {
